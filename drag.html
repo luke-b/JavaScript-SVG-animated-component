@@ -1,0 +1,360 @@
+<html>
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+<script>
+
+  var stage,
+      composite,
+      boundingBox,
+      boundingBoxStroke,
+      boundingBoxRect,
+      projectedBoxRectangle,
+      topLeftCorner,
+      bottomRightCorner,
+      projectedBox,
+      videoButton,
+      startX,
+      startY,
+      moveListener,
+      keys = {},
+      canvas;
+
+  function init() {
+
+    stage = new createjs.Stage("demoCanvas");
+    composite = new createjs.Container();
+
+    boundingBox = new createjs.Shape(); // dashed rectangle
+    boundingBox.graphics.setStrokeStyle(1);
+    boundingBox.graphics.beginStroke("#000000");
+    boundingBoxStroke =  boundingBox.graphics.setStrokeDash([10,5]).command;
+    boundingBoxRect = boundingBox.graphics.drawRect(0,0,0,0).command;
+    composite.addChild(boundingBox);
+
+    topLeftCorner = new createjs.Shape();  // crosshair
+    topLeftCorner.graphics.setStrokeStyle(2);
+    topLeftCorner.graphics.beginStroke("#000000");
+    topLeftCorner.graphics.x = 0;
+    topLeftCorner.graphics.y = 0;
+    topLeftCorner.graphics.moveTo(topLeftCorner.graphics.x-30,topLeftCorner.graphics.y);
+    topLeftCorner.graphics.lineTo(topLeftCorner.graphics.x+30,topLeftCorner.graphics.y);
+    topLeftCorner.graphics.moveTo(topLeftCorner.graphics.x,topLeftCorner.graphics.y-30);
+    topLeftCorner.graphics.lineTo(topLeftCorner.graphics.x,topLeftCorner.graphics.y+30);
+    composite.addChild(topLeftCorner);
+    topLeftCorner.alpha = 0;
+
+    bottomRightCorner = new createjs.Shape(); // crosshair
+    bottomRightCorner.graphics.setStrokeStyle(2);
+    bottomRightCorner.graphics.beginStroke("#000000");
+    bottomRightCorner.graphics.x = 0;
+    bottomRightCorner.graphics.y = 0;
+    bottomRightCorner.graphics.moveTo(bottomRightCorner.graphics.x-30,bottomRightCorner.graphics.y);
+    bottomRightCorner.graphics.lineTo(bottomRightCorner.graphics.x+30,bottomRightCorner.graphics.y);
+    bottomRightCorner.graphics.moveTo(bottomRightCorner.graphics.x,bottomRightCorner.graphics.y-30);
+    bottomRightCorner.graphics.lineTo(bottomRightCorner.graphics.x,bottomRightCorner.graphics.y+30);
+    composite.addChild(bottomRightCorner);
+    bottomRightCorner.alpha=0;
+
+    projectedBox = new createjs.Shape(); // solid rectangle with raster
+
+    projectedBox.graphics.setStrokeStyle(0.5);
+    projectedBox.graphics.beginStroke("#000000");
+    projectedBoxRectangle = projectedBox.graphics.drawRect(0,0,0,0).command;
+    composite.addChild(projectedBox);
+
+    videoButton = new createjs.Shape(); // video playback icon
+
+    videoButton.graphics.beginFill("red");
+    videoButton.graphics.drawRoundRectComplex(75,80,50,35,7,7,7,7);   // red rounded rectangle
+    videoButton.graphics.beginFill("white").drawPolyStar(100, 98, 10, 3, 0, 0);  // white arrow inside rectangle
+    composite.addChild(videoButton);
+    videoButton.alpha = 0;
+
+    stage.addChild(composite);
+    stage.update();
+
+    stage.on("stagemousedown", handlePress);
+    stage.on("stagemouseup", dragEnd);
+
+    createjs.Ticker.on("tick", tick);
+    createjs.Ticker.setFPS(60);
+
+    this.document.onkeydown = keydown;
+    this.document.onkeyup = keyup;
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+  }
+
+  function resizeCanvas(event) {
+    console.log("window resized");
+    canvas = document.getElementById("demoCanvas");
+    canvas.width = document.body.clientWidth; //document.width is obsolete
+    canvas.height = document.body.clientHeight; //document.height is obsolete
+    stage.update();
+  }
+
+  function keydown(event) {
+    keys[event.keyCode] = true;
+
+  }
+
+  function keyup(event) {
+    delete keys[event.keyCode];
+  }
+
+
+  function dragEnd(event) {
+      stage.off("stagemousemove", moveListener);
+  }
+
+  function tick(event) {
+    stage.update(event);
+    boundingBoxStroke.offset--;
+  }
+
+  function handleClick(event){
+
+  }
+
+  function resetBoxTo(newX,newY) {
+    startX = newX;
+    startY = newY;
+
+    bottomRightCorner.x = 0;
+    bottomRightCorner.y = 0;
+    topLeftCorner.alpha = 1;
+    bottomRightCorner.alpha = 1;
+
+    boundingBoxRect.w = 0;
+    boundingBoxRect.h = 0;
+
+    videoButton.x = 0;
+    videoButton.y = 0;
+    videoButton.alpha = 0;
+
+    projectedBoxRectangle.w = 0;
+    projectedBoxRectangle.h = 0;
+
+    stage.update();
+  }
+
+  function dragTo(nwX,nwY) {
+
+      var newX = nwX;
+      var newY = nwY;
+
+      var distX = startX - nwX;
+      var distY = startY - nwY;
+
+      if (newX < startX) newX = startX;
+      if (newY < startY) newY = startY;
+
+      if (keys[17]) {  // control key held down
+
+          if (distX < distY) {
+              newY = nwX*(8/22);
+          } else {
+              newX = nwX*(8/22);
+          }
+      }
+
+      bottomRightCorner.x = newX - startX;
+      bottomRightCorner.y = newY - startY;
+
+      boundingBoxRect.w = newX - startX;
+      boundingBoxRect.h = newY - startY;
+
+      var boxW = newX - startX;
+      var boxH = newY - startY;
+
+      var w = newX - startX;
+      var h = newY - startY;
+
+      var fac = 8/22;
+      var fac2 = 22/8;
+
+      boxH = boxW * fac;
+
+      if (boxH > h) {
+        boxH = h;
+        boxW = h*fac2;
+      }
+
+      projectedBoxRectangle.w = boxW;
+      projectedBoxRectangle.h = boxH;
+      projectedBoxRectangle.y = (h-boxH)/2;
+      projectedBoxRectangle.x = (w-boxW)/2;
+
+      // icon location and visibility adjustment
+
+      videoButton.x = (newX - startX)/2-100;
+      videoButton.y = (newY - startY)/2-100;
+
+      var f = boxW;
+      var f2 = boxH;
+
+      if (f < 50 || f2 < 50) {
+
+        if (videoButton.alpha != 0) {
+          createjs.Tween.get(videoButton).to({
+                alpha: 0
+            },100).call(function() {
+                videoButton.alpha = 0;
+            });
+        }
+
+      } else {
+
+        if (videoButton.alpha != 1) {
+          createjs.Tween.get(videoButton).to({
+                alpha: 1
+            },100).call(function() {
+                videoButton.alpha = 1;
+            });
+        }
+
+      }
+
+      stage.update();
+  }
+
+  function handlePress(event) {
+
+    stage.addChild(composite).set({x:event.stageX, y:event.stageY});
+    composite.w = 0;
+    composite.h = 0;
+
+    resetBoxTo(event.stageX,event.stageY);
+    stage.update();
+
+    moveListener = stage.on("stagemousemove", handleDrag);
+  }
+
+  function handleDrag(event) {
+
+      dragTo(event.stageX,event.stageY);
+  }
+
+</script>
+<body onload="init();">
+
+
+  <canvas id="demoCanvas" style="position:fixed;background:transparent;"></canvas>
+
+  </form>
+
+</div>
+
+<div id="generator">
+  <div class="generate_div">
+    <h3>Paragraphs:</h3>
+    <form id="paragraphs" name="paragraphs" method="post" action="https://www.webfx.com/tools/lorem-ipsum-generator/loremipsum/paragraphs">
+      <input type="text" id="numpar" name="num" size="2" maxlength="3" value="5" />
+      <input type="submit" id="poslji1" class="poslji" name="poslji" value="Generate!" /><br />
+      <h4>Options:</h4>
+      <input type="checkbox" id="p_tags_par" name="p_tags" />
+        <span class="tiny2">
+          <label for="p_tags_par">Add paragraph tags (<p>)</label>
+        </span><br />
+      <input type="checkbox" id="i_tags_par" name="i_tags" />
+        <span class="tiny2">
+          <label for="i_tags_par">Add <i>italic</i> tags (<i>)</label>
+        </span><br />
+      <input type="checkbox" id="b_tags_par" name="b_tags" />
+        <span class="tiny2">
+          <label for="b_tags_par">Add <b>bold</b> tags (<b>)</label>
+        </span><br />
+    </form>
+    <div class="small">This option will generate the specified number of lorem ipsum paragprahs.</div>
+  </div>
+  <div class="generate_div">
+    <h3>Words:</h3>
+    <form id="words" name="words" method="post" action="https://www.webfx.com/tools/lorem-ipsum-generator/loremipsum/words">
+      <input type="text" id="numwords" name="num" size="2" maxlength="4" value="250" />
+      <input type="submit" id="poslji2" class="poslji" name="poslji" value="Generate!" />
+      <h4>Options:</h4>
+      <input type="checkbox" id="p_tags_words" name="p_tags" />
+        <span class="tiny2">
+          <label for="p_tags_words">Add paragraph tags (<p>)</label>
+        </span><br />
+      <input type="checkbox" id="i_tags_words" name="i_tags" />
+        <span class="tiny2">
+          <label for="i_tags_words">Add <i>italic</i> tags (<i>)</label>
+        </span><br />
+      <input type="checkbox" id="b_tags_words" name="b_tags" />
+        <span class="tiny2">
+          <label for="b_tags_words">Add <b>bold</b> tags (<b>)</label>
+        </span><br />
+    </form>
+    <div class="small">This option will generate the specified number of words of lorem ipsum.</div>
+  </div>
+  <div class="generate_div generate_div_last">
+    <h3>Sentences:</h3>
+    <form id="sent" name="sent" method="post" action="https://www.webfx.com/tools/lorem-ipsum-generator/loremipsum/sentences">
+      <input type="text" id="numsent" name="num" size="2" maxlength="3" value="50" />
+      <input type="submit" id="poslji3" class="poslji" name="poslji" value="Generate!" />
+      <h4>Options:</h4>
+      <input type="checkbox" id="p_tags_sent" name="p_tags" />
+        <span class="tiny2">
+          <label for="p_tags_sent">Add paragraph tags (<p>)</label>
+        </span><br />
+      <input type="checkbox" id="i_tags_sent" name="i_tags" />
+        <span class="tiny2">
+          <label for="i_tags_sent">Add <i>italic</i> tags (<i>)</label>
+        </span><br />
+      <input type="checkbox" id="b_tags_sent" name="b_tags" />
+        <span class="tiny2">
+          <label for="b_tags_sent">Add <b>bold</b> tags (<b>)</label>
+        </span><br />
+    </form>
+    <div class="small">This option will generate the specified number of sentences of lorem ipsum.</div>
+  </div>
+</div>
+</div>
+</section>
+
+
+<footer>
+<div class="wrap">
+
+  <h2>Additional Tools:</h2>
+
+  <div class="footer-col">
+    <ul>
+      <li><a href="https://www.webfx.com/blog-topic-idea-generator/" target="_blank">Blog Post Idea Generator</a></li>
+      <li><a href="https://www.webfx.com/internet-real-time/" target="_blank">The Internet in Real Time</a></li>
+      <li><a href="https://www.webfx.com/CPM-Calculator.html" target="_blank">CPM Calculator</a></li>
+      <li><a href="https://www.webfx.com/web-design/color-picker/" target="_blank">Color Picker</a></li>
+    </ul>
+  </div>
+
+  <div class="footer-col">
+    <ul>
+      <li><a href="https://www.webfx.com/fix-marketing-funnel/" target="_blank">Fix Your Marketing Funnel</a></li>
+      <li><a href="https://www.webfx.com/status-generator/" target="_blank">Twitter and Facebook Status Generator</a></li>
+      <li><a href="https://www.webfx.com/seo-tools/faqfox/" target="_blank">Find What Your Users Are Asking About</a></li>
+    </ul>
+  </div>
+
+  <div class="footer-col">
+    <ul>
+      <li><a href="https://www.webfx.com/tools/read-able/" target="_blank">Readability Test Tool</a></li>
+      <li><a href="https://www.webfx.com/tools/new-password-generator/" target="_blank">New Password Generator Tool</a></li>
+      <li><a href="https://www.webfx.com/tools/whats-my-browser-size/" target="_blank">What's My Browser Size? Tool</a></li>
+    </ul>
+  </div>
+
+  <div class="cp">© 2019 <a href="https://www.webfx.com" target="_blank"><strong>WebFX</strong></a>. All rights reserved.
+    </div>
+</div>
+</footer>
+
+
+
+
+
+
+</body>
+
+</html>

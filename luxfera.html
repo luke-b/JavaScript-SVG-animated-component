@@ -1,0 +1,158 @@
+<html>
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+<script>
+
+  // Code goes here
+
+  var cells = {};
+
+  var xoff = 343/2;
+  var yoff = 310/2;
+  var luxW = 40.8/2;
+  var luxH = 43.9/2;
+
+  var pixels;
+  var loaded = false;
+  var counter = 0;
+  var imgHeight = 0;
+  var imgWidth = 0;
+
+  function init() {
+    stage = new createjs.Stage("demoCanvas");
+
+    var doge = new Image();
+     doge.src = "wall.jpg"
+     var bitmap = new createjs.Bitmap(doge);
+     bitmap.scaleX = 0.5;
+     bitmap.scaleY = 0.5;
+     stage.addChild(bitmap);
+     stage.update();
+
+    var blackBack = new createjs.Shape();
+    blackBack.graphics.beginFill("black");
+  //  blackBack.graphics.drawRect(xoff,yoff,22*luxW+4,8*luxH+4);
+    stage.addChild(blackBack);
+
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 22; j++) {
+
+        let r = Math.round(Math.random()*255);
+        let g = Math.round(Math.random()*255);
+        let b = Math.round(Math.random()*255);
+
+        let hue = Math.round(1/((r+g+b)/3));
+
+        let r2 = Math.round(r/3);
+        let g2 = Math.round(g/3);
+        let b2 = Math.round(b/3);
+
+        var luxfera = new createjs.Shape();
+        cells[(i*22+j)+"gradient"] = luxfera.graphics.beginRadialGradientFill([fullColorHex(r,g,b),fullColorHex(r2,g2,b2),fullColorHex(r,g,b)], [.0, .8, .0], luxW/2, luxH/2, 0, luxH/2, luxW/2, luxH/2).command;
+        cells[(i*22+j)+"stroke"] = luxfera.graphics.beginStroke(fullColorHex(r,g,b)).command;
+        cells[(i*22+j)+"luxfera"] = luxfera;
+        luxfera.graphics.drawRoundRectComplex(0,0,luxW,luxH,3,3,3,3);
+        luxfera.x = xoff+2+j*luxW;
+        luxfera.y = yoff+2+i*luxH;
+
+        stage.addChild(luxfera);
+      }
+    }
+
+    stage.update();
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    createjs.Ticker.on("tick", tick);
+
+    pixels = getPixels("schrader.png");
+  }
+
+  function getPixels(url) {
+
+      var img = new Image();
+      img.src = url;
+
+      img.onload = function () {
+        var canvas = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+
+        context.drawImage(img, 0, 0);
+
+        pixels = context.getImageData(0, 0,
+                                    img.width, img.height).data;
+
+        imgHeight = img.height;
+        imgWidth = img.width;
+        loaded = true;
+      }
+  }
+
+  function changeLuxColor(x,y,r,g,b) {
+    let r2 = Math.round(r/3);
+    let g2 = Math.round(g/3);
+    let b2 = Math.round(b/3);
+    cells[(y*22+x)+"gradient"].radialGradient([fullColorHex(r,g,b),fullColorHex(r2,g2,b2),fullColorHex(r,g,b)], [.0, .8, .0], luxW/2, luxH/2, 0, luxH/2, luxW/2, luxH/2);
+    cells[(y*22+x)+"stroke"].style = fullColorHex(r,g,b);
+
+    let hue = r/255;
+    cells[(y*22+x)+"luxfera"].alpha = hue;
+  }
+
+  var rgbToHex = function (rgb) {
+    var hex = Number(rgb).toString(16);
+    if (hex.length < 2) {
+         hex = "0" + hex;
+    }
+    return hex;
+  };
+
+  var fullColorHex = function(r,g,b) {
+    var red = rgbToHex(r);
+    var green = rgbToHex(g);
+    var blue = rgbToHex(b);
+    return "#"+red+green+blue;
+  };
+
+  function resizeCanvas(event) {
+    console.log("window resized");
+    canvas = document.getElementById("demoCanvas");
+    canvas.width = document.body.clientWidth; //document.width is obsolete
+    canvas.height = document.body.clientHeight; //document.height is obsolete
+    stage.update();
+  }
+
+  function tick(event) {
+    stage.update(event);
+    if (!loaded) {
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 22; j++) {
+            let hue = Math.round(Math.random()*255);
+            changeLuxColor(j,i,hue,hue,hue);
+        }
+      }
+    } else {
+
+      counter += 0.08;
+      let ampl = (imgHeight-8)/2;
+
+      let yoffset = Math.round(Math.sin(counter)*ampl+ampl);
+
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 22; j++) {
+            changeLuxColor(j,i,pixels[(i+yoffset)*imgWidth*4+j*4+0],
+                               pixels[(i+yoffset)*imgWidth*4+j*4+1],
+                               pixels[(i+yoffset)*imgWidth*4+j*4+2]);
+        }
+      }
+
+
+    }
+  }
+
+</script>
+<body onload="init();">
+  <canvas id="demoCanvas" style="position:fixed;background:transparent;"></canvas>
+</body>
+
+</html>
